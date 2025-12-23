@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>College Notes Hub — 3D Modern (Firebase Auth + Firestore + Storage)</title>
+  <meta name="description" content="3D college notes app with Google & Email/Password auth, multi-admin, Firestore, Storage, and mobile-ready file opening."/>
+  <style>
+    :root{
+      --blue:#2563eb; --indigo:#4f46e5; --violet:#7c3aed;
+      --bg: radial-gradient(1200px 800px at 10% 10%, #6366f1 0%, transparent 60%),
+            radial-gradient(1000px 600px at 90% 30%, #22d3ee 0%, transparent 60%),
+            linear-gradient(135deg, #0ea5e9 0%, #6366f1 40%, #a855f7 100%);
+      --glass: rgba(255,255,255,0.10); --border: rgba(255,255,255,0.22);
+      --text:#ffffff; --muted:#e0e7ff; --shadow: rgba(0,0,0,0.35);
+      --card: rgba(255,255,255,0.12); --card-border: rgba(255,255,255,0.18);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text); background: var(--bg); display:flex; min-height:100vh;
+      align-items:center; justify-content:center; overflow-x:hidden;
+    }
+    .page{width:100%; max-width:1200px; padding:24px}
+    .glass{
+      background:var(--glass); border:1px solid var(--border);
+      backdrop-filter: blur(18px) saturate(140%);
+      box-shadow: 0 30px 60px var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.25);
+      border-radius:22px; padding:22px;
+    }
+    .title{font-weight:900; font-size:32px}
+    .subtitle{color:var(--muted); margin-top:8px}
+    .divider{height:1px; background:rgba(255,255,255,0.18); margin:16px 0}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+    .grid{display:grid; gap:14px}
+    .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:900px){ .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media (max-width:640px){ .grid-2,.grid-3{grid-template-columns:1fr} }
+    .btn{display:inline-flex; align-items:center; justify-content:center;
+      background:#ffffff; color:#111827; border:none; border-radius:14px;
+      padding:12px 18px; font-weight:800; cursor:pointer;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+      transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .btn:hover{ transform: translateY(-2px); box-shadow: 0 18px 32px rgba(0,0,0,0.30); }
+    .btn-outline{ background:transparent; color:#fff; border:1px solid var(--border); }
+    .btn-gradient{ background: linear-gradient(90deg, #93c5fd, #a78bfa, #c084fc); color:#0b1020; }
+    .badge{display:inline-flex; align-items:center; gap:6px; background:rgba(147,197,253,0.18);
+      border:1px solid rgba(147,197,253,0.35); color:#fff; border-radius:999px; padding:6px 10px; font-weight:700; font-size:12px}
+    .field{
+      width:100%; background:rgba(255,255,255,0.12); color:#fff;
+      border:1px solid rgba(255,255,255,0.22); border-radius:12px; padding:12px 14px; outline:none;
+      transition:border .2s ease, box-shadow .2s ease;
+    }
+    .field:focus{ border-color:#93c5fd; box-shadow: 0 0 0 4px rgba(147,197,253,0.25); }
+    .card{ background:var(--card); border:1px solid var(--card-border); border-radius:16px; padding:16px; }
+    .small{font-size:12px; color:#e5e7eb}
+    .muted{color:#cbd5e1}
+    .hidden{display:none}
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .note-row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .viewer{ position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:9999; }
+    .viewer .sheet{ width:100%; height:100vh; background:#000; overflow:hidden; display:flex; flex-direction:column; }
+    .viewer .bar{ display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(17,24,39,.85); color:#fff; }
+    .viewer .actions{ display:flex; gap:8px; flex-wrap:wrap }
+    .viewer .content{ flex:1; background:#000 }
+    .viewer iframe{ width:100%; height:100%; border:0; background:#111827 }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Landing -->
+    <div id="landing" class="glass">
+      <div class="title">College Notes Hub</div>
+      <div class="subtitle">3D-styled notes app for admins and students — smooth, responsive, delightful.</div>
+      <div class="divider"></div>
+
+      <div class="grid grid-2">
+        <div class="glass">
+          <div style="font-weight:800; margin-bottom:8px;">Login with Google</div>
+          <button class="btn btn-gradient" id="btnGoogle">Sign in with Google</button>
+        </div>
+        <div class="glass">
+          <div style="font-weight:800; margin-bottom:8px;">Or Email & Password</div>
+          <input id="email" class="field" placeholder="Email"/>
+          <input id="password" class="field" type="password" placeholder="Password"/>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn btn-outline" id="btnRegister">Create account</button>
+            <button class="btn btn-gradient" id="btnLogin">Login</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div id="roleSelect" class="grid grid-2 hidden">
+        <div class="card" onclick="setRole('admin')">
+          <div style="font-weight:800; font-size:18px">🎓 College Owner / Admin</div>
+          <div class="small">Create college, departments, subjects, and upload PDFs, links, videos.</div>
+        </div>
+        <div class="card" onclick="setRole('student')">
+          <div style="font-weight:800; font-size:18px">👩‍🎓 College Student</div>
+          <div class="small">Find your subjects and open notes instantly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminWrap" class="glass hidden" style="margin-top:18px;">
+      <div class="topbar">
+        <div>
+          <div class="title">Admin dashboard</div>
+          <div class="subtitle">Card UI, progress, preview, uploads. Multi-admin supported.</div>
+        </div>
+        <div class="row">
+          <span class="badge" id="adminProgress">Step 1 of 4</span>
+          <button class="btn btn-outline" onclick="exitToLanding()">Exit</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+
+      <!-- Step 1 -->
+      <div id="adminStep1" class="grid">
+        <div style="font-weight:800">College name</div>
+        <input id="collegeName" class="field" placeholder="Enter college name" list="collegeList"/>
+        <datalist id="collegeList"></datalist>
+        <div class="row">
+          <button class="btn btn-gradient" onclick="saveCollegeNameAndNext()">Next</button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="adminStep2" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:800">Departments & subjects</div>
+          <div class="row">
+            <button class="btn btn-outline" onclick="goStep(1)">Back</button>
+            <button class="btn btn-gradient" onclick="goStep(3)">Preview</button>
+          </div>
+        </div>
+        <div class="small">Add departments and subjects using dynamic inputs.</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" onclick="addDepartment()">+ Add department</button>
+        </div>
+        <div id="deptList" class="grid" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="adminStep3" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:800">Preview structure</div>
+          <button class="btn btn-outline" onclick="goStep(2)">Back</button>
+        </div>
+        <div class="glass" style="padding:12px; margin-top:10px;">
+          <pre id="previewArea" class="small" style="white-space:pre-wrap; margin:0;"></pre>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn btn-gradient" onclick="saveStructure()">Save structure</button>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div id="adminStep4" class="hidden">
+        <div class="row" style="justify-content:space-between;">
+          <div style="font-weight:800">Uploads</div>
+          <button class="btn btn-outline" onclick="goStep(3)">Back</button>
+        </div>
+        <div class="small">Choose department and subject, then upload notes.</div>
+        <div class="row" style="margin-top:10px;">
+          <select id="uploadDept" class="field" style="flex:1"></select>
+          <select id="uploadSubject" class="field" style="flex:1"></select>
+        </div>
+        <div class="grid grid-3" style="margin-top:12px;">
+          <div class="glass">
+            <div style="font-weight:800; margin-bottom:6px;">Upload PDF</div>
+            <input id="pdfTitle" class="field" placeholder="Title"/>
+            <input id="pdfDesc" class="field" placeholder="Description (optional)"/>
+            <input id="pdfFile" class="field" type="file" accept="application/pdf"/>
+            <div class="row" style="margin-top:8px;"><button class="btn btn-gradient" onclick="uploadNote('pdf')">Upload PDF</button></div>
+          </div>
+          <div class="glass">
+            <div style="font-weight:800; margin-bottom:6px;">Add link</div>
+            <input id="linkTitle" class="field" placeholder="Title"/>
+            <input id="linkDesc" class="field" placeholder="Description (optional)"/>
+            <input id="linkUrl" class="field" placeholder="https://example.com/resource"/>
+            <div class="row" style="margin-top:8px;"><button class="btn btn-gradient" onclick="uploadNote('link')">Add link</button></div>
+          </div>
+          <div class="glass">
+            <div style="font-weight:800; margin-bottom:6px;">Add video</div>
+            <input id="videoTitle" class="field" placeholder="Title"/>
+            <input id="videoDesc" class="field" placeholder="Description (optional)"/>
+            <input id="videoFile" class="field" type="file" accept="video/*"/>
+            <input id="videoUrl" class="field" placeholder="Or paste video URL (YouTube)"/>
+            <div class="row" style="margin-top:8px;"><button class="btn btn-gradient" onclick="uploadNote('video')">Add video</button></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="font-weight:800;">Subject folder</div>
+        <div id="adminNotes" class="grid" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="back-row">
+        <button class="btn btn-outline" onclick="exitToLanding()">⬅ Exit to Role Selection</button>
+      </div>
+    </div>
+
+    <!-- Student Dashboard -->
+    <div id="studentWrap" class="glass hidden" style="margin-top:18px;">
+      <div class="topbar">
+        <div>
+          <div class="title">Student dashboard</div>
+          <div class="subtitle">Enter college and department, see subjects, and open notes.</div>
+        </div>
+        <button class="btn btn-outline" onclick="exitToLanding()">Exit</button>
+      </div>
+      <div class="divider"></div>
+
+      <div class="row">
+        <input id="studentCollege" class="field" placeholder="Enter or select college" list="studentCollegeList"/>
+        <datalist id="studentCollegeList"></datalist>
+        <select id="studentDept" class="field" style="min-width:220px"></select>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-weight:800;">Subjects</div>
+      <div id="subjectCards" class="grid grid-3" style="margin-top:10px;"></div>
+
+      <div class="divider"></div>
+      <div style="font-weight:800;">Notes</div>
+      <div id="studentNotes" class="grid" style="margin-top:10px;"></div>
+
+      <div class="back-row">
+        <button class="btn btn-outline" onclick="exitToLanding()">⬅ Exit to Role Selection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Viewer -->
+  <div id="viewer" class="viewer" aria-hidden="true">
+    <div class="sheet">
+      <div class="bar">
+        <span id="viewerTitle">Opening…</span>
+        <div class="actions">
+          <button class="btn btn-outline" id="btnOpenHere">View here</button>
+          <button class="btn btn-outline" id="btnNewTab">Open in new tab</button>
+          <button class="btn btn-outline" id="btnDownload">Download</button>
+          <button class="btn btn-outline" id="btnShare">Share</button>
+          <button class="btn btn-gradient" onclick="closeViewer()">Close</button>
+        </div>
+      </div>
+      <div class="content">
+        <iframe id="webFrame" src="" class="hidden" allow="fullscreen"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    // 1) REPLACE THIS WITH YOUR REAL FIREBASE CONFIG (Firebase Console → Project settings → Web app)
+    const firebaseConfig = {
+      apiKey: "REPLACE_WITH_REAL_KEY",
+      authDomain: "REPLACE_WITH_REAL_PROJECT.firebaseapp.com",
+      projectId: "REPLACE_WITH_REAL_PROJECT",
+      storageBucket: "REPLACE_WITH_REAL_PROJECT.appspot.com",
+      messagingSenderId: "REPLACE_WITH_REAL_SENDER_ID",
+      appId: "REPLACE_WITH_REAL_APP_ID"
+    };
+    if(!firebaseConfig.apiKey || firebaseConfig.apiKey.includes('REPLACE')) {
+      alert('Missing Firebase config. Paste your real Firebase config from the console.');
+    }
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import {
+      getAuth, GoogleAuthProvider, signInWithPopup,
+      createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, getDocs }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+
+    const appFB = initializeApp(firebaseConfig);
+    const auth = getAuth(appFB);
+    const db = getFirestore(appFB);
+    const storage = getStorage(appFB);
+
+    const el = id => document.getElementById(id);
+    const show = id => el(id)?.classList.remove('hidden');
+    const hide = id => el(id)?.classList.add('hidden');
+    const slug = s => s ? s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') : '';
+    const escapeHtml = s => String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    const normalizeUrl = url => { const u=(url||'').trim(); if(!u) return ''; return /^https?:|^data:/.test(u)?u:'https://'+u.replace(/^\/*/,''); };
+    const toEmbedUrl = url => { const yt=url.match(/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|embed\/|shorts\/)?([A-Za-z0-9_-]{6,})/i); return yt?`https://www.youtube.com/embed/${yt[4]}`:url; };
+    const updateProgress = step => { const p=el('adminProgress'); if(p) p.textContent = `Step ${step} of 4`; };
+
+    let currentUser=null, currentRole=null, tmpDepartments=[], currentOpenNote=null, currentCollegeId=null;
+
+    // Auth
+    el('btnGoogle').addEventListener('click', async ()=>{
+      try{ await signInWithPopup(auth, new GoogleAuthProvider()); }
+      catch(e){ alert('Google sign-in failed: ' + e.message + '\nCheck Authorized Domains in Firebase Auth settings.'); }
+    });
+    el('btnRegister').addEventListener('click', async ()=>{
+      const email=el('email').value.trim(), password=el('password').value.trim();
+      if(!email || !password){ alert('Enter email and password'); return; }
+      try{ await createUserWithEmailAndPassword(auth, email, password); }
+      catch(e){ alert('Register failed: ' + e.message); }
+    });
+    el('btnLogin').addEventListener('click', async ()=>{
+      const email=el('email').value.trim(), password=el('password').value.trim();
+      if(!email || !password){ alert('Enter email and password'); return; }
+      try{ await signInWithEmailAndPassword(auth, email, password); }
+      catch(e){ alert('Login failed: ' + e.message); }
+    });
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(user){ currentUser=user; show('roleSelect'); refreshStudentCollegeList(); }
+      else{ currentUser=null; hide('roleSelect'); hide('adminWrap'); hide('studentWrap'); show('landing'); }
+    });
+
+    window.setRole = (r)=>{ currentRole=r; hide('landing'); if(r==='admin'){ show('adminWrap'); updateProgress(1); goStep(1); } else { show('studentWrap'); bootstrapStudent(); } };
+    window.exitToLanding = ()=>{ hide('adminWrap'); hide('studentWrap'); show('landing'); show('roleSelect'); refreshStudentCollegeList(); };
+
+    // Admin wizard
+    window.saveCollegeNameAndNext = async ()=>{
+      const name = el('collegeName').value.trim(); if(!name){ alert('Enter college name'); return; }
+      const collegeId = slug(name); currentCollegeId = collegeId;
+      const cRef = doc(db,'colleges',collegeId); const cSnap = await getDoc(cRef);
+      if(!cSnap.exists()){ await setDoc(cRef, { name, adminMembers:[currentUser.uid], createdAt:Date.now(), departments:{} }); }
+      else{ const data=cSnap.data(); const set=new Set(data.adminMembers||[]); set.add(currentUser.uid); await updateDoc(cRef,{adminMembers:Array.from(set)}); }
+      updateProgress(2); goStep(2); refreshStudentCollegeList();
+    };
+    window.goStep = (step)=>{ hide('adminStep1'); hide('adminStep2'); hide('adminStep3'); hide('adminStep4'); updateProgress(step);
+      if(step===1) show('adminStep1'); if(step===2){ show('adminStep2'); renderDepartments(); }
+      if(step===3){ show('adminStep3'); renderPreview(); } if(step===4){ show('adminStep4'); populateUploadSelectors(); renderAdminNotes(); } };
+    window.addDepartment = ()=>{ tmpDepartments.push({ name:'', subjects:[] }); renderDepartments(); };
+    window.addSubject = (i)=>{ if(tmpDepartments[i]){ tmpDepartments[i].subjects.push(''); renderDepartments(); } };
+
+    function renderDepartments(){
+      const wrap=el('deptList'); wrap.innerHTML='';
+      tmpDepartments.forEach((d,i)=>{
+        const card=document.createElement('div'); card.className='glass';
+        card.innerHTML=`
+          <div class="row" style="justify-content:space-between;">
+            <div style="font-weight:800">Department ${i+1}</div>
+            <button class="btn btn-outline" data-del="${i}">Remove</button>
+          </div>
+          <input class="field" placeholder="Department name" value="${escapeHtml(d.name)}" data-type="dept" data-idx="${i}"/>
+          <div class="row" style="margin-top:8px;"><button class="btn btn-gradient" data-addsub="${i}">+ Add subject</button></div>
+          <div class="grid" style="margin-top:8px;">
+            ${d.subjects.map((s,j)=>`
+              <div class="row" style="align-items:stretch;">
+                <input class="field" placeholder="Subject ${j+1}" value="${escapeHtml(s)}" data-type="sub" data-idx="${i}" data-subidx="${j}" style="flex:1"/>
+                <button class="btn btn-outline" data-delsub="${i}:${j}">Remove</button>
+              </div>`).join('')}
+          </div>`;
+        wrap.appendChild(card);
+      });
+      wrap.querySelectorAll('input[data-type="dept"]').forEach(inp=> inp.addEventListener('input', e=>{ const i=Number(e.target.dataset.idx); tmpDepartments[i].name=e.target.value; }));
+      wrap.querySelectorAll('input[data-type="sub"]').forEach(inp=> inp.addEventListener('input', e=>{ const i=Number(e.target.dataset.idx), j=Number(e.target.dataset.subidx); tmpDepartments[i].subjects[j]=e.target.value; }));
+      wrap.querySelectorAll('button[data-addsub]').forEach(btn=> btn.addEventListener('click', e=> window.addSubject(Number(e.target.dataset.addsub))));
+      wrap.querySelectorAll('button[data-del]').forEach(btn=> btn.addEventListener('click', e=>{ const i=Number(e.target.dataset.del); tmpDepartments.splice(i,1); renderDepartments(); }));
+      wrap.querySelectorAll('button[data-delsub]').forEach(btn=> btn.addEventListener('click', e=>{ const [i,j]=(e.target.dataset.delsub||'').split(':').map(Number); tmpDepartments[i].subjects.splice(j,1); renderDepartments(); }));
+    }
+
+    function renderPreview(){
+      const name=el('collegeName').value.trim();
+      const data = { collegeName: name || '(not set)', departments: tmpDepartments.map(d=>({ name: d.name || '(unnamed)', subjects: d.subjects.filter(s=>s.trim()) })) };
+      el('previewArea').textContent = JSON.stringify(data, null, 2);
+    }
+
+    window.saveStructure = async ()=>{
+      const name=el('collegeName').value.trim(); if(!name){ alert('Enter college name'); return; }
+      const collegeId=slug(name); currentCollegeId=collegeId;
+      const departments={};
+      tmpDepartments.forEach(d=>{
+        const deptId=slug(d.name); if(!deptId) return;
+        const subjects={}; d.subjects.forEach(s=>{ const subjId=slug(s); if(!subjId) return; subjects[subjId]={ name:s }; });
+        departments[deptId]={ name:d.name, subjects };
+      });
+      await setDoc(doc(db,'colleges',collegeId), { name, adminMembers:[currentUser.uid], departments, updatedAt:Date.now() }, { merge:true });
+      tmpDepartments=[]; goStep(4); populateUploadSelectors(); renderAdminNotes(); refreshStudentCollegeList();
+      alert('College structure saved.');
+    };
+
+    async function refreshStudentCollegeList(){
+      const q=await getDocs(collection(db,'colleges'));
+      const slist=el('studentCollegeList'); const adminList=el('collegeList');
+      if(slist) slist.innerHTML=''; if(adminList) adminList.innerHTML='';
+      q.forEach(docSnap=>{
+        const data=docSnap.data(); const opt=document.createElement('option'); opt.value=data.name;
+        if(slist) slist.appendChild(opt); if(adminList) adminList.appendChild(opt.cloneNode(true));
+      });
+    }
+
+    function populateUploadSelectors(){
+      if(!currentCollegeId) currentCollegeId = slug(el('collegeName').value.trim() || '');
+      const deptSel=el('uploadDept'), subjSel=el('uploadSubject');
+      deptSel.innerHTML=''; subjSel.innerHTML='';
+      const o0=document.createElement('option'); o0.value=''; o0.textContent='Select department'; deptSel.appendChild(o0);
+      getDoc(doc(db,'colleges',currentCollegeId)).then(snap=>{
+        const data=snap.data(); if(!data || !data.departments) return;
+        Object.entries(data.departments).forEach(([id,d])=>{ const o=document.createElement('option'); o.value=id; o.textContent=d.name; deptSel.appendChild(o); });
+        deptSel.onchange = ()=>{
+          subjSel.innerHTML=''; const s0=document.createElement('option'); s0.value=''; s0.textContent='Select subject'; subjSel.appendChild(s0);
+          const d=data.departments[deptSel.value]; if(!d) return;
+          Object.entries(d.subjects||{}).forEach(([sid,s])=>{ const o=document.createElement('option'); o.value=sid; o.textContent=s.name; subjSel.appendChild(o); });
+          renderAdminNotes();
+        };
+        subjSel.onchange = renderAdminNotes;
+      });
+    }
+
+    // Upload notes
+    window.uploadNote = async (type)=>{
+      if(!currentCollegeId) currentCollegeId = slug(el('collegeName').value.trim() || '');
+      const deptId=el('uploadDept').value, subjId=el('uploadSubject').value;
+      if(!deptId || !subjId){ alert('Select department and subject'); return; }
+      const notesColl = collection(db,'colleges',currentCollegeId,'departments',deptId,'subjects',subjId,'notes');
+
+      if(type==='pdf'){
+        const title=el('pdfTitle').value.trim(), description=el('pdfDesc').value.trim();
+        const file=el('pdfFile').files[0]; if(!file || !title){ alert('Select a PDF and enter title.'); return; }
+        const path=`notes/${currentCollegeId}/${deptId}/${subjId}/${Date.now()}_${file.name}`;
+        const sRef=storageRef(storage,path); await uploadBytes(sRef,file); const url=await getDownloadURL(sRef);
+        await addDoc(notesColl, { type, title, description, url, createdAt:Date.now(), createdBy:currentUser.uid });
+        el('pdfTitle').value=''; el('pdfDesc').value=''; el('pdfFile').value=''; renderAdminNotes(); alert('PDF uploaded.');
+      }else if(type==='link'){
+        const title=el('linkTitle').value.trim(), description=el('linkDesc').value.trim(); let url=normalizeUrl(el('linkUrl').value.trim());
+        if(!title || !url){ alert('Enter a valid link and title.'); return; }
+        await addDoc(notesColl, { type, title, description, url, createdAt:Date.now(), createdBy:currentUser.uid });
+        el('linkTitle').value=''; el('linkDesc').value=''; el('linkUrl').value=''; renderAdminNotes(); alert('Link added.');
+      }else if(type==='video'){
+        const title=el('videoTitle').value.trim(), description=el('videoDesc').value.trim();
+        const file=el('videoFile').files[0]; let url=normalizeUrl(el('videoUrl').value.trim());
+        if(file){ const path=`videos/${currentCollegeId}/${deptId}/${subjId}/${Date.now()}_${file.name}`; const sRef=storageRef(storage,path); await uploadBytes(sRef,file); url=await getDownloadURL(sRef); }
+        if(!title || !url){ alert('Provide a video file or URL, with a title.'); return; }
+        await addDoc(notesColl, { type, title, description, url, createdAt:Date.now(), createdBy:currentUser.uid });
+        el('videoTitle').value=''; el('videoDesc').value=''; el('videoFile').value=''; el('videoUrl').value=''; renderAdminNotes(); alert('Video added.');
+      }else{ alert('Unknown note type.'); }
+    };
+
+    async function renderAdminNotes(){
+      if(!currentCollegeId) return;
+      const deptId=el('uploadDept').value, subjId=el('uploadSubject').value;
+      const wrap=el('adminNotes'); wrap.innerHTML='';
+      if(!deptId || !subjId){ wrap.innerHTML='<div class="muted">Select a department and subject to view notes.</div>'; return; }
+      const q=await getDocs(collection(db,'colleges',currentCollegeId,'departments',deptId,'subjects',subjId,'notes'));
+      const items=[]; q.forEach(s=> items.push({ id:s.id, ...s.data() })); if(items.length===0){ wrap.innerHTML='<div class="muted">No notes yet.</div>'; return; }
+      items.sort((a,b)=>b.createdAt-a.createdAt).forEach(n=>{
+        const card=document.createElement('div'); card.className='card';
+        card.innerHTML=`
+          <div class="note-row">
+            <div>
+              <div style="font-weight:800">${escapeHtml(n.title)}</div>
+              <div class="small">${n.type.toUpperCase()} • ${new Date(n.createdAt).toLocaleString()}</div>
+              ${n.description ? `<div class="small" style="margin-top:6px">${escapeHtml(n.description)}</div>` : ''}
+            </div>
+            <div class="row"><button class="btn btn-gradient" data-open="${n.id}">Open</button></div>
+          </div>`;
+        wrap.appendChild(card);
+      });
+      wrap.querySelectorAll('button[data-open]').forEach(btn=> btn.addEventListener('click', e=>{
+        const id=e.target.dataset.open; const note=items.find(x=>x.id===id); if(note) openInViewer(note);
+      }));
+    }
+
+    // Student flow
+    function bootstrapStudent(){
+      refreshStudentCollegeList();
+      const collegeInput=el('studentCollege'), deptSel=el('studentDept');
+      collegeInput.addEventListener('input', ()=>{ renderStudentDepartments(); renderSubjectsGrid(); });
+      deptSel.addEventListener('change', ()=>{ renderSubjectsGrid(); });
+      getDocs(collection(db,'colleges')).then(q=>{
+        const first=q.docs[0]; if(first){ collegeInput.value=first.data().name; renderStudentDepartments().then(()=> renderSubjectsGrid()); }
+        else{ el('subjectCards').innerHTML='<div class="muted">No colleges yet. Ask your admin to set up.</div>'; }
+      });
+    }
+    function findCollegeIdByName(name){
+      return getDocs(collection(db,'colleges')).then(q=>{
+        const d=q.docs.find(x=> x.data().name.toLowerCase() === (name||'').trim().toLowerCase());
+        return d ? d.id : null;
+      });
+    }
+    async function renderStudentDepartments(){
+      const deptSel=el('studentDept'); deptSel.innerHTML='';
+      const cId=await findCollegeIdByName(el('studentCollege').value);
+      const o0=document.createElement('option'); o0.value=''; o0.textContent='Select department'; deptSel.appendChild(o0);
+      if(!cId) return;
+      const cSnap=await getDoc(doc(db,'colleges',cId)); const data=cSnap.data();
+      Object.entries(data.departments||{}).forEach(([id,d])=>{ const o=document.createElement('option'); o.value=id; o.textContent=d.name; deptSel.appendChild(o); });
+    }
+    async function renderSubjectsGrid(){
+      const cards=el('subjectCards'); cards.innerHTML='';
+      const cId=await findCollegeIdByName(el('studentCollege').value); const dId=el('studentDept').value;
+      if(!cId || !dId){ cards.innerHTML='<div class="muted">Select college and department to see subjects.</div>'; return; }
+      const cSnap=await getDoc(doc(db,'colleges',cId)); const dept=cSnap.data()?.departments?.[dId];
+      const entries=Object.entries(dept?.subjects||{}); if(entries.length===0){ cards.innerHTML='<div class="muted">No subjects found.</div>'; return; }
+      entries.forEach(([sid,s])=>{
+        const card=document.createElement('div'); card.className='card';
+        card.innerHTML=`<div style="font-weight:800">${escapeHtml(s.name)}</div><div class="small">Tap to view notes</div>`;
+        card.addEventListener('click', ()=>{ renderStudentNotesBySubject(cId,dId,sid); });
+        cards.appendChild(card);
+      });
+    }
+    async function renderStudentNotesBySubject(cId,dId,sId){
+      const wrap=el('studentNotes'); wrap.innerHTML='';
+      const q=await getDocs(collection(db,'colleges',cId,'departments',dId,'subjects',sId,'notes'));
+      const items=[]; q.forEach(s=> items.push({ id:s.id, ...s.data() })); if(items.length===0){ wrap.innerHTML='<div class="muted">No notes for this subject yet.</div>'; return; }
+      items.sort((a,b)=>b.createdAt-a.createdAt).forEach(n=>{
+        const row=document.createElement('div'); row.className='card';
+        row.innerHTML=`
+          <div class="note-row">
+            <div>
+              <div style="font-weight:800">${escapeHtml(n.title)}</div>
+              <div class="small">${n.type.toUpperCase()} • ${new Date(n.createdAt).toLocaleString()}</div>
+              ${n.description ? `<div class="small" style="margin-top:6px">${escapeHtml(n.description)}</div>` : ''}
+            </div>
+            <button class="btn btn-gradient" data-open="${n.id}">Open</button>
+          </div>`;
+        wrap.appendChild(row);
+      });
+      wrap.querySelectorAll('button[data-open]').forEach(btn=> btn.addEventListener('click', e=>{
+        const id=e.target.dataset.open; const note=items.find(x=>x.id===id); if(note) openInViewer(note);
+      }));
+    }
+
+    // Fullscreen viewer
+    function openInViewer(note){
+      currentOpenNote=note;
+      const viewer=el('viewer'), frame=el('webFrame'), title=el('viewerTitle');
+      title.textContent = note.title || 'Opening…';
+      frame.classList.add('hidden'); frame.removeAttribute('src');
+      const url=normalizeUrl(note.url || '');
+      // Handle X-Frame-Options: open new tab
+      if(/instagram\.com|facebook\.com|accounts\.google\.com/i.test(url)){
+        const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        return;
+      }
+      frame.setAttribute('src', note.type==='video' ? toEmbedUrl(url) : url);
+      frame.classList.remove('hidden');
+      viewer.style.display='flex';
+    }
+    window.closeViewer = ()=>{
+      const viewer=el('viewer'), frame=el('webFrame');
+      viewer.style.display='none'; frame.classList.add('hidden'); frame.removeAttribute('src'); currentOpenNote=null;
+    };
+    el('btnOpenHere').addEventListener('click', ()=>{
+      if(!currentOpenNote) return;
+      const frame=el('webFrame'); const url=normalizeUrl(currentOpenNote.url || '');
+      frame.setAttribute('src', currentOpenNote.type==='video' ? toEmbedUrl(url) : url);
+      frame.classList.remove('hidden');
+    });
+    el('btnNewTab').addEventListener('click', ()=>{
+      if(!currentOpenNote) return; const url=normalizeUrl(currentOpenNote.url || '');
+      const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+    el('btnDownload').addEventListener('click', ()=>{
+      if(!currentOpenNote) return; const url=normalizeUrl(currentOpenNote.url || '');
+      const a=document.createElement('a'); a.href=url; a.download=(currentOpenNote.title || 'file');
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+    el('btnShare').addEventListener('click', async ()=>{
+      if(!currentOpenNote) return; const url=normalizeUrl(currentOpenNote.url || '');
+      try{ if(navigator.share){ await navigator.share({ title: currentOpenNote.title || 'Note', url }); }
+        else{ await navigator.clipboard.writeText(url); alert('Link copied. Open with your preferred app.'); } }
+      catch(e){ alert('Share failed.'); }
+    });
+  </script>
+</body>
+</html>
