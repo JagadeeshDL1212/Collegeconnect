@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>College Connect | Modern College Notes Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="College Connect - A modern hub for students and admins to share subject notes. Google login, smooth animations, and responsive dashboards." />
+  <meta name="keywords" content="college connect, college notes, student dashboard, admin dashboard, subject notes, education portal, online notes, college management system" />
+  <meta name="author" content="College Connect Team" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="College Connect" />
+  <meta property="og:description" content="A modern, stylish, 3D college notes hub for admins and students. Upload and access notes easily." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://college-connect.netlify.app" />
+  <meta property="og:image" content="https://college-connect.netlify.app/preview.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="College Connect" />
+  <meta name="twitter:description" content="Access subject notes by college, department, and subject. Modern UI, Google login, responsive design." />
+  <meta name="twitter:image" content="https://college-connect.netlify.app/preview.png" />
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"/>
+
+  <style>
+    :root{
+      --bg: #0f1226;
+      --card: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.12);
+      --text: #eef1ff;
+      --muted: #c9cdec;
+      --primary: #7c5cff;
+      --secondary: #39b6ff;
+      --accent: #ff7fd1;
+      --success: #36d399;
+      --danger: #ff6740;
+      --glass: rgba(255,255,255,0.06);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 600px at 10% 10%, #1b1e3c 0, #0f1226 70%),
+        radial-gradient(900px 500px at 90% 90%, #1a2340 0, #0f1226 70%);
+      min-height:100dvh; overflow-x:hidden;
+    }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px; position:sticky; top:0; z-index:50;
+      backdrop-filter:blur(8px);
+    }
+    .logo{display:flex; align-items:center; gap:12px; font-weight:800}
+    .logo i{color:var(--secondary)}
+    .actions{display:flex; gap:10px; flex-wrap:wrap}
+    .container{max-width:1000px; margin:0 auto; padding:16px 20px}
+
+    .card{
+      background:var(--glass);
+      backdrop-filter:blur(12px);
+      border:1px solid var(--border);
+      border-radius:18px; padding:20px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06);
+      transform-style:preserve-3d;
+      transition:transform .6s cubic-bezier(.2,.8,.2,1), box-shadow .4s;
+    }
+    .card:hover{ transform:translateZ(10px) rotateX(.5deg) rotateY(-.5deg); box-shadow:0 18px 40px rgba(0,0,0,0.45) }
+
+    .title{
+      font-size:28px; font-weight:800;
+      background:linear-gradient(135deg, #9bb8ff, #e7d2ff);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .subtitle{ color:var(--muted) }
+
+    .grid{ display:grid; gap:16px }
+    .grid-2{ grid-template-columns:1fr 1fr }
+    .grid-3{ grid-template-columns:repeat(3,1fr) }
+    @media (max-width:760px){ .grid-2,.grid-3{ grid-template-columns:1fr } }
+
+    .btn{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:12px 16px; border-radius:14px; border:1px solid var(--border);
+      color:var(--text);
+      background:linear-gradient(135deg, rgba(124,92,255,0.5), rgba(57,182,255,0.4));
+      cursor:pointer; transition:transform .2s, filter .2s;
+    }
+    .btn:hover{ transform:translateY(-2px); filter:brightness(1.06) }
+    .btn.secondary{ background:linear-gradient(135deg, rgba(57,182,255,0.5), rgba(124,92,255,0.4)) }
+    .btn.success{ background:linear-gradient(135deg, rgba(54,211,153,0.6), rgba(57,182,255,0.4)) }
+    .btn.danger{ background:linear-gradient(135deg, rgba(255,103,64,0.6), rgba(255,127,209,0.4)) }
+
+    .pill{ padding:8px 12px; border:1px dashed var(--border); border-radius:12px; color:var(--muted) }
+
+    label{display:block; font-weight:600; margin-bottom:6px}
+    input, select, textarea{
+      width:100%; padding:12px 14px; border-radius:12px;
+      border:1px solid var(--border); background:rgba(255,255,255,0.04);
+      color:var(--text); outline:none;
+    }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    @media (max-width:720px){ .row{ grid-template-columns:1fr } }
+
+    .list{ display:grid; gap:12px }
+    .note-card{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px; border-radius:12px; border:1px solid var(--border);
+      background:rgba(255,255,255,0.05);
+    }
+    .note-card .meta{ display:flex; align-items:center; gap:10px }
+    .note-card .meta i{ color:var(--accent) }
+
+    .crumbs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+    .crumb{ padding:6px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid var(--border) }
+
+    .hidden{ display:none !important }
+
+    /* Animations */
+    .fade-in{ animation:fade .45s ease both }
+    @keyframes fade{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+    .slide-3d{ animation:slide3d .6s cubic-bezier(.2,.8,.2,1) both }
+    @keyframes slide3d{ from{opacity:.0; transform:translateZ(-60px) rotateX(-5deg)} to{opacity:1; transform:translateZ(0) rotateX(0)} }
+
+    /* Fullscreen viewer overlay */
+    .viewer{
+      position:fixed; inset:0; background:rgba(0,0,0,0.9);
+      display:none; z-index:1000;
+    }
+    .viewer .frame{
+      position:absolute; inset:12px; background:#111; border-radius:14px;
+      border:1px solid #333; overflow:hidden;
+    }
+    .viewer .bar{
+      position:absolute; top:10px; right:10px; display:flex; gap:8px; z-index:1001;
+    }
+    iframe{ width:100%; height:100%; border:0; background:#111 }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <i class="ri-graduation-cap-fill"></i>
+      <div>College Connect</div>
+    </div>
+    <div class="actions">
+      <button id="loginBtn" class="btn"><i class="ri-google-fill"></i> Sign in with Google</button>
+      <button id="logoutBtn" class="btn danger hidden"><i class="ri-logout-box-r-line"></i> Logout</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Landing -->
+    <section id="landing" class="slide-3d">
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="title">Connect students and notes, beautifully</div>
+          <p class="subtitle">Glassmorphism, gradients, and subtle 3D motion. Fast, responsive, and clear navigation for Admins and Students.</p>
+          <div class="grid grid-3" style="margin-top:10px">
+            <div class="pill">Google Authentication</div>
+            <div class="pill">Real-time Firestore</div>
+            <div class="pill">Secure Storage</div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn success" id="getStarted"><i class="ri-arrow-right-up-line"></i> Get started</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="grid" style="gap:14px">
+            <div class="card">
+              <h3><i class="ri-shield-user-fill"></i> Admin</h3>
+              <p class="subtitle">Create college → departments → subjects. Upload PDFs, links, and videos.</p>
+              <button class="btn" id="chooseAdmin"><i class="ri-settings-5-fill"></i> Admin dashboard</button>
+            </div>
+            <div class="card">
+              <h3><i class="ri-user-3-fill"></i> Student</h3>
+              <p class="subtitle">Pick your college → department → subject. Open notes instantly.</p>
+              <button class="btn secondary" id="chooseStudent"><i class="ri-book-2-fill"></i> Student dashboard</button>
+            </div>
+            <p class="subtitle">Tip: Sign in with Google first to access dashboards.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Admin dashboard -->
+    <section id="admin" class="hidden">
+      <div class="crumbs fade-in">
+        <div class="crumb">Admin</div>
+        <button class="btn" id="adminBack"><i class="ri-arrow-go-back-line"></i> Back</button>
+        <button class="btn danger" id="adminExit"><i class="ri-home-4-line"></i> Exit</button>
+      </div>
+
+      <div class="card fade-in">
+        <h2>College setup</h2>
+        <p class="subtitle">Step-by-step inputs with dynamic fields and collapsible sections.</p>
+        <div class="row">
+          <div>
+            <label>College name</label>
+            <input id="collegeName" placeholder="e.g., Sri Venkateswara College" />
+          </div>
+          <div>
+            <label>Number of departments</label>
+            <input id="deptCount" type="number" min="1" placeholder="e.g., 4" />
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn success" id="buildDepartments"><i class="ri-magic-line"></i> Build departments</button>
+        </div>
+      </div>
+
+      <div id="departmentsContainer" class="grid fade-in"></div>
+
+      <div class="card fade-in">
+        <h3>Preview & save</h3>
+        <p class="subtitle">Review the structure then save to the database.</p>
+        <div id="preview" class="grid"></div>
+        <button class="btn success" id="saveStructure"><i class="ri-save-3-fill"></i> Save to database</button>
+      </div>
+
+      <div class="card fade-in">
+        <h3>Upload notes</h3>
+        <p class="subtitle">Select department and subject to upload notes.</p>
+        <div class="row">
+          <div><label>Department</label><select id="upDept"></select></div>
+          <div><label>Subject</label><select id="upSubject"></select></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label>Note type</label>
+            <select id="noteType">
+              <option value="pdf">PDF</option>
+              <option value="link">Link</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+          <div>
+            <label>Title</label>
+            <input id="noteTitle" placeholder="e.g., Unit 1 - Introduction" />
+          </div>
+        </div>
+        <div id="filePicker" style="margin-top:12px">
+          <input type="file" id="noteFile" accept="application/pdf,video/*" />
+        </div>
+        <div id="linkPicker" class="hidden" style="margin-top:12px">
+          <input id="noteLink" placeholder="Paste URL (YouTube, Drive, website)" />
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn" id="uploadNote"><i class="ri-upload-2-line"></i> Upload</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Student dashboard -->
+    <section id="student" class="hidden">
+      <div class="crumbs fade-in">
+        <div class="crumb">Student</div>
+        <button class="btn" id="studentBack"><i class="ri-arrow-go-back-line"></i> Back</button>
+        <button class="btn danger" id="studentExit"><i class="ri-home-4-line"></i> Exit</button>
+      </div>
+
+      <div class="card fade-in">
+        <h3>Find your notes</h3>
+        <p class="subtitle">Searchable college list, then department and subject.</p>
+        <div class="row">
+          <div>
+            <label>College</label>
+            <select id="stCollege"></select>
+          </div>
+          <div>
+            <label>Department</label>
+            <select id="stDept"></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label>Subject</label>
+            <select id="stSubject"></select>
+          </div>
+          <div style="display:flex; align-items:flex-end">
+            <button class="btn" id="loadNotes"><i class="ri-search-eye-line"></i> Load notes</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fade-in">
+        <h3>Subjects</h3>
+        <div id="subjectsCards" class="grid grid-3"></div>
+      </div>
+
+      <div class="card fade-in">
+        <h3>Notes</h3>
+        <div id="notesList" class="list"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Fullscreen viewer -->
+  <div class="viewer" id="viewer">
+    <div class="frame">
+      <div class="bar">
+        <button class="btn danger" id="closeViewer"><i class="ri-close-line"></i> Close</button>
+        <a class="btn" id="openExternal" target="_blank" rel="noopener"><i class="ri-external-link-line"></i> Open in browser</a>
+        <a class="btn" id="downloadFile" download><i class="ri-download-2-line"></i> Download</a>
+        <button class="btn secondary" id="shareFile"><i class="ri-share-forward-line"></i> Share</button>
+      </div>
+      <iframe id="viewerFrame" src=""></iframe>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (Modular v10 via CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    // IMPORTANT: Replace with your real Firebase Web App config
+    // Get it from Firebase Console → Project settings → Your apps → Web
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize services
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Elements
+    const landing = document.getElementById("landing");
+    const admin = document.getElementById("admin");
+    const student = document.getElementById("student");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const chooseAdmin = document.getElementById("chooseAdmin");
+    const chooseStudent = document.getElementById("chooseStudent");
+    const getStarted = document.getElementById("getStarted");
+
+    const adminBack = document.getElementById("adminBack");
+    const adminExit = document.getElementById("adminExit");
+    const studentBack = document.getElementById("studentBack");
+    const studentExit = document.getElementById("studentExit");
+
+    const collegeName = document.getElementById("collegeName");
+    const deptCount = document.getElementById("deptCount");
+    const buildDepartmentsBtn = document.getElementById("buildDepartments");
+    const departmentsContainer = document.getElementById("departmentsContainer");
+    const preview = document.getElementById("preview");
+    const saveStructureBtn = document.getElementById("saveStructure");
+
+    const upDept = document.getElementById("upDept");
+    const upSubject = document.getElementById("upSubject");
+    const noteType = document.getElementById("noteType");
+    const noteTitle = document.getElementById("noteTitle");
+    const noteFile = document.getElementById("noteFile");
+    const noteLink = document.getElementById("noteLink");
+    const filePicker = document.getElementById("filePicker");
+    const linkPicker = document.getElementById("linkPicker");
+    const uploadNoteBtn = document.getElementById("uploadNote");
+
+    const stCollege = document.getElementById("stCollege");
+    const stDept = document.getElementById("stDept");
+    const stSubject = document.getElementById("stSubject");
+    const subjectsCards = document.getElementById("subjectsCards");
+    const loadNotesBtn = document.getElementById("loadNotes");
+    const notesList = document.getElementById("notesList");
+
+    const viewer = document.getElementById("viewer");
+    const viewerFrame = document.getElementById("viewerFrame");
+    const closeViewer = document.getElementById("closeViewer");
+    const openExternal = document.getElementById("openExternal");
+    const downloadFile = document.getElementById("downloadFile");
+    const shareFile = document.getElementById("shareFile");
+
+    // Navigation helpers
+    function show(section){
+      landing.classList.add("hidden");
+      admin.classList.add("hidden");
+      student.classList.add("hidden");
+      section.classList.remove("hidden");
+      section.classList.add("slide-3d");
+    }
+    function toLanding(){ show(landing) }
+    function toAdmin(){ show(admin) }
+    function toStudent(){ show(student) }
+
+    getStarted.onclick = () => toLanding(); // design effect
+    chooseAdmin.onclick = () => toAdmin();
+    chooseStudent.onclick = () => toStudent();
+
+    adminBack.onclick = () => toLanding();
+    adminExit.onclick = () => toLanding();
+    studentBack.onclick = () => toLanding();
+    studentExit.onclick = () => toLanding();
+
+    // Auth (Google only)
+    const provider = new GoogleAuthProvider();
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login failed: " + (e.message || e));
+      }
+    };
+    logoutBtn.onclick = () => signOut(auth);
+    onAuthStateChanged(auth, (user) => {
+      if (user){
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+      } else {
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        toLanding();
+      }
+    });
+
+    // Build dynamic department/subject inputs
+    buildDepartmentsBtn.onclick = () => {
+      const name = collegeName.value.trim();
+      const count = parseInt(deptCount.value || "0");
+      departmentsContainer.innerHTML = "";
+      preview.innerHTML = "";
+      if (!name || count < 1){
+        alert("Enter college name and a valid number of departments.");
+        return;
+      }
+      for(let i=0;i<count;i++){
+        const card = document.createElement("div");
+        card.className = "card";
+        const bodyId = "dept-body-" + i;
+        card.innerHTML = `
+          <h3><i class="ri-building-2-line"></i> Department ${i+1}</h3>
+          <div class="row">
+            <div>
+              <label>Department name</label>
+              <input class="deptName" placeholder="e.g., CSE" />
+            </div>
+            <div>
+              <label>Number of subjects</label>
+              <input class="subCount" type="number" min="1" placeholder="e.g., 6" />
+            </div>
+          </div>
+          <div class="subjects grid" id="${bodyId}" style="margin-top:10px"></div>
+          <div style="margin-top:10px">
+            <button class="btn addSubs"><i class="ri-magic-line"></i> Build subjects</button>
+          </div>
+        `;
+        departmentsContainer.appendChild(card);
+
+        const subjectsBox = card.querySelector(".subjects");
+        const addSubsBtn = card.querySelector(".addSubs");
+        addSubsBtn.onclick = () => {
+          const subCount = parseInt(card.querySelector(".subCount").value || "0");
+          subjectsBox.innerHTML = "";
+          if (subCount < 1){ alert("Enter a valid subject count."); return; }
+          for(let s=0;s<subCount;s++){
+            const subRow = document.createElement("div");
+            subRow.className = "row";
+            subRow.innerHTML = `
+              <div>
+                <label>Subject ${s+1} name</label>
+                <input class="subName" placeholder="e.g., Data Structures" />
+              </div>
+            `;
+            subjectsBox.appendChild(subRow);
+          }
+          renderPreview();
+        };
+      }
+    };
+
+    function renderPreview(){
+      preview.innerHTML = "";
+      const name = collegeName.value.trim();
+      const deptCards = Array.from(departmentsContainer.querySelectorAll(".card"));
+      const wrap = document.createElement("div");
+      wrap.className = "card";
+      let html = `<h4>Preview — ${name || "College"}</h4>`;
+      for(const card of deptCards){
+        const dName = card.querySelector(".deptName").value.trim() || "(Department)";
+        const subs = Array.from(card.querySelectorAll(".subName")).map(i => i.value.trim()).filter(Boolean);
+        html += `<div class="pill"><i class="ri-building-2-line"></i> ${dName} — ${subs.length} subjects</div>`;
+      }
+      wrap.innerHTML = html || "<div class='subtitle'>Add departments and subjects to see preview.</div>";
+      preview.appendChild(wrap);
+    }
+
+    // Save college structure (Firestore)
+    saveStructureBtn.onclick = async () => {
+      const name = collegeName.value.trim();
+      if (!name){ alert("College name is required."); return; }
+      const collegeId = name.toLowerCase().replace(/\s+/g, "-");
+
+      const deptCards = Array.from(departmentsContainer.querySelectorAll(".card"));
+      const structure = [];
+      for(const card of deptCards){
+        const dName = card.querySelector(".deptName").value.trim();
+        if (!dName) continue;
+        const subs = Array.from(card.querySelectorAll(".subName"))
+          .map(i => i.value.trim()).filter(Boolean);
+        structure.push({ department: dName, subjects: subs });
+      }
+      if (structure.length === 0){ alert("Add at least one department with subjects."); return; }
+
+      try {
+        // colleges/{collegeId}
+        await setDoc(doc(db, "colleges", collegeId), { name, updatedAt: Date.now() });
+        // departments and subjects
+        for(const d of structure){
+          const deptId = d.department.toLowerCase().replace(/\s+/g, "-");
+          await setDoc(doc(db, "colleges", collegeId, "departments", deptId), { name: d.department });
+          for(const s of d.subjects){
+            const subId = s.toLowerCase().replace(/\s+/g, "-");
+            await setDoc(doc(db, "colleges", collegeId, "departments", deptId, "subjects", subId), { name: s });
+          }
+        }
+        alert("College structure saved!");
+        await populateAdminUploadSelectors(collegeId);
+        await populateStudentColleges(); // ensure students can see the new college
+      } catch(e){
+        alert("Save failed: " + (e.message || e));
+      }
+    };
+
+    async function populateAdminUploadSelectors(collegeId){
+      // Departments
+      upDept.innerHTML = "";
+      const deptsSnap = await getDocs(collection(db, "colleges", collegeId, "departments"));
+      upDept.appendChild(new Option("-- Select department --", ""));
+      const deptList = [];
+      deptsSnap.forEach(d => deptList.push({ id:d.id, name:d.data().name }));
+      deptList.forEach(d => upDept.appendChild(new Option(d.name, d.id)));
+      upSubject.innerHTML = "";
+      upDept.onchange = async () => {
+        upSubject.innerHTML = "";
+        if (!upDept.value) return;
+        const subsSnap = await getDocs(collection(db, "colleges", collegeId, "departments", upDept.value, "subjects"));
+        upSubject.appendChild(new Option("-- Select subject --", ""));
+        subsSnap.forEach(s => upSubject.appendChild(new Option(s.data().name, s.id)));
+      };
+    }
+
+    // Note type toggle
+    noteType.onchange = () => {
+      const type = noteType.value;
+      if (type === "link"){ filePicker.classList.add("hidden"); linkPicker.classList.remove("hidden"); }
+      else { linkPicker.classList.add("hidden"); filePicker.classList.remove("hidden"); }
+    };
+
+    // Upload notes (Storage + Firestore metadata)
+    uploadNoteBtn.onclick = async () => {
+      const collegeId = collegeName.value.trim().toLowerCase().replace(/\s+/g, "-");
+      const deptId = upDept.value;
+      const subId = upSubject.value;
+      const title = noteTitle.value.trim();
+      const type = noteType.value;
+
+      if (!collegeId || !deptId || !subId || !title){
+        alert("Select department + subject and enter a title.");
+        return;
+      }
+
+      try{
+        let fileURL = null;
+        let payloadType = type;
+
+        if (type === "link"){
+          const link = noteLink.value.trim();
+          if (!link){ alert("Paste a valid link."); return; }
+          fileURL = link; // store link
+          payloadType = "link";
+        } else {
+          const file = noteFile.files[0];
+          if (!file){ alert("Choose a file."); return; }
+          const path = `colleges/${collegeId}/${deptId}/${subId}/${Date.now()}-${file.name}`;
+          const r = ref(storage, path);
+          await uploadBytes(r, file);
+          fileURL = await getDownloadURL(r);
+          // Infer type by MIME if needed
+          if (type === "video" || (file.type && file.type.startsWith("video/"))) payloadType = "video";
+          else payloadType = "pdf";
+        }
+
+        const noteId = `${Date.now()}`;
+        await setDoc(doc(db, "colleges", collegeId, "departments", deptId, "subjects", subId, "notes", noteId), {
+          title, type: payloadType, url: fileURL, createdAt: Date.now()
+        });
+
+        alert("Note uploaded!");
+      } catch(e){
+        alert("Upload failed: " + (e.message || e));
+      }
+    };
+
+    // Student select lists
+    async function populateStudentColleges(){
+      stCollege.innerHTML = "";
+      const colSnap = await getDocs(collection(db, "colleges"));
+      stCollege.appendChild(new Option("-- Select college --", ""));
+      const colleges = [];
+      colSnap.forEach(c => colleges.push({ id:c.id, name:c.data().name }));
+      colleges.sort((a,b)=>a.name.localeCompare(b.name)).forEach(c => stCollege.appendChild(new Option(c.name, c.id)));
+
+      stDept.innerHTML = "";
+      stSubject.innerHTML = "";
+      subjectsCards.innerHTML = "";
+
+      stCollege.onchange = async () => {
+        stDept.innerHTML = "";
+        stSubject.innerHTML = "";
+        subjectsCards.innerHTML = "";
+        if (!stCollege.value) return;
+        const dSnap = await getDocs(collection(db, "colleges", stCollege.value, "departments"));
+        stDept.appendChild(new Option("-- Select department --", ""));
+        const depts = [];
+        dSnap.forEach(d => depts.push({ id:d.id, name:d.data().name }));
+        depts.sort((a,b)=>a.name.localeCompare(b.name)).forEach(d => stDept.appendChild(new Option(d.name, d.id)));
+      };
+
+      stDept.onchange = async () => {
+        stSubject.innerHTML = "";
+        subjectsCards.innerHTML = "";
+        if (!stCollege.value || !stDept.value) return;
+        const sSnap = await getDocs(collection(db, "colleges", stCollege.value, "departments", stDept.value, "subjects"));
+        stSubject.appendChild(new Option("-- Select subject --", ""));
+        const subs = [];
+        sSnap.forEach(s => subs.push({ id:s.id, name:s.data().name }));
+        subs.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s => {
+          stSubject.appendChild(new Option(s.name, s.id));
+          // Animated subject cards
+          const c = document.createElement("div");
+          c.className = "card fade-in";
+          c.innerHTML = `<div style="display:flex; align-items:center; gap:10px">
+            <i class="ri-book-2-line" style="color:${getAccent()}"></i>
+            <div style="font-weight:600">${s.name}</div>
+          </div>`;
+          c.onclick = () => { stSubject.value = s.id; loadNotesBtn.click(); };
+          subjectsCards.appendChild(c);
+        });
+      };
+    }
+
+    function getAccent(){
+      const colors = [ "#7c5cff", "#39b6ff", "#ff7fd1", "#36d399" ];
+      return colors[Math.floor(Math.random()*colors.length)];
+    }
+
+    // Load notes for selected subject
+    loadNotesBtn.onclick = async () => {
+      const c = stCollege.value, d = stDept.value, s = stSubject.value;
+      if (!c || !d || !s){ alert("Select college, department, and subject."); return; }
+
+      notesList.innerHTML = "";
+      const notesSnap = await getDocs(collection(db, "colleges", c, "departments", d, "subjects", s, "notes"));
+      const items = [];
+      notesSnap.forEach(n => items.push({ id:n.id, ...n.data() }));
+      if (items.length === 0){
+        notesList.innerHTML = `<div class="subtitle">No notes yet for this subject.</div>`;
+        return;
+      }
+      for(const n of items){
+        const card = document.createElement("div");
+        card.className = "note-card fade-in";
+        const icon = n.type === "pdf" ? "ri-file-pdf-2-line" : (n.type === "video" ? "ri-video-line" : "ri-external-link-line");
+        const safeURL = n.url;
+        card.innerHTML = `
+          <div class="meta">
+            <i class="${icon}"></i>
+            <div>
+              <div style="font-weight:600">${n.title}</div>
+              <div class="subtitle">${n.type.toUpperCase()}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px">
+            <button class="btn" data-url="${safeURL}" data-type="${n.type}"><i class="ri-eye-line"></i> Open</button>
+            <a class="btn" href="${safeURL}" target="_blank" rel="noopener"><i class="ri-external-link-line"></i> In browser</a>
+            <a class="btn" href="${safeURL}" download><i class="ri-download-2-line"></i> Download</a>
+          </div>
+        `;
+        const openBtn = card.querySelector("button[data-url]");
+        openBtn.onclick = () => openViewer(safeURL, n.type);
+        notesList.appendChild(card);
+      }
+    };
+
+    // Fullscreen viewer behavior with safe fallbacks
+    let currentURL = null;
+    function blocksIframe(u){
+      // Common block: instagram.com denies embedding via X-Frame-Options
+      return /instagram\.com/i.test(u);
+    }
+    function openViewer(url, type){
+      currentURL = url;
+      if (type === "link" && blocksIframe(url)){
+        // Open externally if iframe is blocked
+        window.open(url, "_blank", "noopener");
+        return;
+      }
+      viewer.style.display = "block";
+      viewerFrame.src = url; // For PDFs/Drive direct links: shows inline; otherwise use external
+      openExternal.href = url;
+      downloadFile.href = url;
+    }
+    closeViewer.onclick = () => {
+      viewer.style.display = "none";
+      viewerFrame.src = "about:blank";
+    };
+    shareFile.onclick = async () => {
+      if (navigator.share){
+        try{
+          await navigator.share({ title:"Open note", text:"Open this note", url: currentURL });
+        } catch(e){ /* ignored */ }
+      } else {
+        try{
+          await navigator.clipboard.writeText(currentURL);
+          alert("Link copied. Open with your preferred app.");
+        } catch(e){
+          alert("Copy failed. Try 'In browser' or 'Download'.");
+        }
+      }
+    };
+
+    // Android intent fallback for PDFs (helps open with native apps)
+    function openWithApp(url){
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isPDF = /\.pdf(\?.*)?$/.test(url) || url.includes("mime=application/pdf");
+      if (isAndroid && isPDF){
+        // Try Google Drive viewer (works widely)
+        const driveViewer = "https://drive.google.com/viewerng/viewer?embedded=true&url=" + encodeURIComponent(url);
+        window.open(driveViewer, "_blank", "noopener");
+      } else {
+        window.open(url, "_blank", "noopener");
+      }
+    }
+    // If “Open in web” seems blocked, students can use “In browser” or “Download” and then pick their reader app.
+
+    // Initialize student list on load
+    await populateStudentColleges();
+
+    // NOTES:
+    // - To prevent “API key not valid”:
+    //   1) Use exact config from Firebase Web app settings.
+    //   2) Add your Netlify domain under Authentication → Settings → Authorized domains.
+    //   3) Enable Google under Authentication → Sign-in method.
+    // - Multiple admins are supported by rules that allow writes for signed-in users (tighten via admins list if needed).
+  </script>
+
+  <!-- Firestore security rules (paste in Firebase Console → Firestore → Rules)
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /colleges/{collegeId} {
+        allow read: if true; // students/public can read
+        allow write: if request.auth != null; // only signed-in users (admins) can write
+        match /departments/{deptId} {
+          allow read: if true;
+          allow write: if request.auth != null;
+          match /subjects/{subId} {
+            allow read: if true;
+            allow write: if request.auth != null;
+            match /notes/{noteId} {
+              allow read: if true;      // students can read notes
+              allow write: if request.auth != null; // admins upload
+            }
+          }
+        }
+      }
+    }
+  }
+  -->
+
+  <!-- Storage rules (paste in Firebase Console → Storage → Rules)
+  rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      match /{allPaths=**} {
+        allow read: if true;             // anyone can download notes
+        allow write: if request.auth != null; // only signed-in users can upload
+      }
+    }
+  }
+  -->
+</body>
+</html>
